@@ -1,0 +1,55 @@
+.gameInfo {
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 1rem;
+  width: 100%;
+}
+
+.status {
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  font-weight: bold;
+}
+
+.resetButton {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  margin-bottom: 1rem;
+  width: 100%;
+}
+
+.resetButton:hover {
+  background-color: #45a049;
+}
+
+.modeToggle, .aiSettings, .timeSettings {
+  margin-bottom: 1rem;
+}
+
+.modeToggle label, .aiSettings label, .timeSettings label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: bold;
+}
+
+.modeToggle select, .aiSettings select, .timeSettings select {
+  width: 100%;
+  padding: 0.5rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+@media (min-width: 768px) {
+  .gameInfo {
+    min-width: 250px;
+  }
+}
+

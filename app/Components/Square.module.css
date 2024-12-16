@@ -1,0 +1,45 @@
+.square {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+}
+
+.light {
+  background-color: #f0d9b5;
+}
+
+.dark {
+  background-color: #b58863;
+}
+
+.piece {
+  width: 90%;
+  height: 90%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.piece svg {
+  width: 100%;
+  height: 100%;
+}
+
+.selected {
+  box-shadow: inset 0 0 0 4px rgba(0, 0, 0, 0.4);
+}
+
+.possibleMove {
+  cursor: pointer;
+}
+
+.possibleMoveIndicator {
+  width: 25%;
+  height: 25%;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.3);
+}
+

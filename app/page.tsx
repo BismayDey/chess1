@@ -1,101 +1,155 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useState, useEffect, useCallback } from "react";
+import { Chess, Move, Square } from "chess.js";
+import Board from "../components/Board";
+import GameInfo from "../components/GameInfo";
+import MoveHistory from "../components/MoveHistory";
+import Clock from "../components/Clock";
+import { findBestMove } from "./utils/chessAI";
+import styles from "./page.module.css";
+
+export default function ChessGame() {
+  const [game, setGame] = useState(new Chess());
+  const [currentPlayer, setCurrentPlayer] = useState<"w" | "b">("w");
+  const [status, setStatus] = useState("");
+  const [moveHistory, setMoveHistory] = useState<Move[]>([]);
+  const [aiLevel, setAiLevel] = useState(3);
+  const [timeLimit, setTimeLimit] = useState(10);
+  const [timeLeft, setTimeLeft] = useState({ w: 600, b: 600 });
+  const [gameMode, setGameMode] = useState<"pvp" | "ai">("pvp");
+  const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
+  const [possibleMoves, setPossibleMoves] = useState<Square[]>([]);
+
+  useEffect(() => {
+    updateStatus();
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => ({
+        ...prev,
+        [currentPlayer]: Math.max(0, prev[currentPlayer] - 1),
+      }));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [game, currentPlayer]);
+
+  const updateStatus = useCallback(() => {
+    let status = "";
+    if (game.isCheckmate()) {
+      status = `Checkmate! ${currentPlayer === "w" ? "Black" : "White"} wins!`;
+    } else if (game.isDraw()) {
+      status = "Draw!";
+    } else if (game.isCheck()) {
+      status = `${currentPlayer === "w" ? "White" : "Black"} is in check`;
+    } else {
+      status = `${currentPlayer === "w" ? "White" : "Black"} to move`;
+    }
+    setStatus(status);
+  }, [game, currentPlayer]);
+
+  const handleMove = useCallback(
+    (from: Square, to: Square) => {
+      try {
+        const move = game.move({ from, to, promotion: "q" }); // Always promote to queen for simplicity
+        if (move) {
+          setGame(new Chess(game.fen()));
+          setCurrentPlayer(currentPlayer === "w" ? "b" : "w");
+          setMoveHistory(game.history({ verbose: true }));
+          setSelectedSquare(null);
+          setPossibleMoves([]);
+          updateStatus();
+
+          if (gameMode === "ai" && currentPlayer === "w") {
+            setTimeout(makeAIMove, 250);
+          }
+        }
+      } catch (error) {
+        console.error("Invalid move:", error);
+      }
+    },
+    [game, currentPlayer, gameMode, updateStatus]
+  );
+
+  const makeAIMove = useCallback(() => {
+    const bestMove = findBestMove(game, aiLevel);
+    if (bestMove) {
+      handleMove(bestMove.from as Square, bestMove.to as Square);
+    }
+  }, [game, aiLevel, handleMove]);
+
+  const handleSquareClick = useCallback(
+    (square: Square) => {
+      if (selectedSquare === null) {
+        const piece = game.get(square);
+        if (piece && piece.color === currentPlayer) {
+          setSelectedSquare(square);
+          setPossibleMoves(
+            game
+              .moves({ square, verbose: true })
+              .map((move) => move.to as Square)
+          );
+        }
+      } else {
+        if (possibleMoves.includes(square)) {
+          handleMove(selectedSquare, square);
+        } else {
+          setSelectedSquare(null);
+          setPossibleMoves([]);
+        }
+      }
+    },
+    [selectedSquare, possibleMoves, game, currentPlayer, handleMove]
+  );
+
+  const resetGame = useCallback(() => {
+    setGame(new Chess());
+    setCurrentPlayer("w");
+    setMoveHistory([]);
+    setTimeLeft({ w: timeLimit * 60, b: timeLimit * 60 });
+    setSelectedSquare(null);
+    setPossibleMoves([]);
+    updateStatus();
+  }, [timeLimit, updateStatus]);
+
+  const handleAILevelChange = useCallback((level: number) => {
+    setAiLevel(level);
+  }, []);
+
+  const toggleGameMode = useCallback(() => {
+    setGameMode((prevMode) => (prevMode === "pvp" ? "ai" : "pvp"));
+    resetGame();
+  }, [resetGame]);
+
+  const handleTimeLimitChange = useCallback((time: number) => {
+    setTimeLimit(time);
+    setTimeLeft({ w: time * 60, b: time * 60 });
+  }, []);
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
+    <div className={styles.container}>
+      <h1 className={styles.title}>Chess Game</h1>
+      <div className={styles.gameArea}>
+        <Board
+          game={game}
+          currentPlayer={currentPlayer}
+          onSquareClick={handleSquareClick}
+          selectedSquare={selectedSquare}
+          possibleMoves={possibleMoves}
         />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+        <div className={styles.sidebar}>
+          <GameInfo
+            status={status}
+            onReset={resetGame}
+            aiLevel={aiLevel}
+            onAILevelChange={handleAILevelChange}
+            gameMode={gameMode}
+            onToggleGameMode={toggleGameMode}
+            timeLimit={timeLimit}
+            onTimeLimitChange={handleTimeLimitChange}
+          />
+          <Clock time={timeLeft} currentPlayer={currentPlayer} />
+          <MoveHistory moves={moveHistory} />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
     </div>
   );
 }
